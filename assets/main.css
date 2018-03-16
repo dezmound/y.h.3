@@ -1,0 +1,64 @@
+.wrapper {
+    width: 100%;
+    max-width: 640px;
+    margin: 0 auto;
+    position: relative;
+    overflow: hidden;
+}
+.code {
+    position: absolute;
+    width: 30%;
+    top: 0;
+    height: 100%;
+    color: white;
+    padding: 15px;
+    font-family: monospace;
+    opacity: 0.7;
+    will-change: background;
+    user-select: none;
+    pointer-events: none;
+    font-size: 0.8rem;
+    transition: 0.3s background;
+    animation: black-background 2s 0s ease infinite;
+}
+.scene-walker {
+    position: absolute;
+    width: 20px;
+    height: 20px;
+    top: 0;
+    transition: .7s transform;
+    will-change: transform;
+    border: 1px dashed #fff;
+}
+.scene-walker::before {
+    display: block;
+    content: '';
+    width: 200vw;
+    left: -100vw;
+    top: 50%;
+    position:  relative;
+    height: 1px;
+    background-color: white;
+}
+.scene-walker::after {
+    display: block;
+    content: '';
+    position:  absolute;
+    width: 1px;
+    left: 50%;
+    height: 200vh;
+    top: -100vh;
+    background-color: white;
+}
+
+@keyframes black-background {
+    from {
+        background: rgba(0,0,0,0);
+    }
+    50% {
+        background: rgba(0,0,0,0.15);
+    }
+    to {
+        background: rgba(0,0,0,0);
+    }
+}
