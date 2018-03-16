@@ -63,6 +63,7 @@ class Canvas {
                 this._videoStream.stream.videoHeight
             );
             this.filters.map((f) => {
+                f.afterRedraw(this._ctx);
                 f.apply(this._ctx);
             });
         } else {

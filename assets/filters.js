@@ -7,6 +7,12 @@ class Filter {
      * @param {CanvasRenderingContext2D} ctx
      */
     apply(ctx) {}
+
+    /**
+     * Вызывается, когда сцена полностью перерисовывается.
+     * @param {CanvasRenderingContext2D} ctx
+     */
+    afterRedraw(ctx) {}
 }
 
 /**
@@ -141,5 +147,103 @@ class FilterVoice extends Filter {
             _width,
             this.options.height
         );
+    }
+}
+
+/**
+ * Фильтр поиск лица на изображении, добавление рамки и текста.
+ */
+class FilterFace extends Filter {
+    /**
+     * Конструктор класса.
+     * @param {Object} [options]
+     */
+    constructor(options) {
+        super();
+        this.options = Object.assign({
+            delay: 1000,
+            strokeStyle: 'rgba(255,255,255,1)',
+            fontSize: 2.4,
+            fontStyle: 'sans-serif',
+            lineDash: [15],
+            clearTarget: false,
+            text: 'Unknown target',
+        }, options);
+        this.options.font = 'normal normal ' + this.options.fontSize
+            + 'rem ' + this.options.fontStyle;
+        this._timer = null;
+        this._tracker = new window.tracking.ObjectTracker(['face']);
+        this._tracker.setInitialScale(4);
+        this._tracker.setStepSize(2);
+        this._tracker.setEdgesDensity(0.1);
+    }
+    /**
+     * @inheritDoc
+     */
+    apply(ctx) {
+        if (!window.tracking) {
+            throw new Error('Tracking js are required');
+        }
+        let _imageData = ctx.getImageData(
+            0, 0,
+            ctx.canvas.width,
+            ctx.canvas.height
+        ).data;
+        this._timer = this._timer || setTimeout(() => {
+            requestAnimationFrame(() => {
+                this._tracker.track(
+                    _imageData, ctx.canvas.width, ctx.canvas.height
+                );
+            });
+            if (
+                this.options.clearTarget
+                && this._lastRect
+                && !this._clearTimer
+            ) {
+                this._clearTimer = setTimeout(() => {
+                    this._lastRect = null;
+                    this._clearTimer = null;
+                }, this.options.delay * 3);
+            }
+            this._timer = null;
+        }, this.options.delay);
+        this._tracker.on('track', (event) => {
+            if (event.data.length) {
+                this._lastRect = event.data[0];
+                ctx.strokeStyle = this.options.strokeStyle;
+                ctx.setLineDash(this.options.lineDash);
+                ctx.strokeRect(
+                    event.data[0].x,
+                    event.data[0].y,
+                    event.data[0].width,
+                    event.data[0].height
+                );
+            }
+        });
+    }
+
+    /**
+     * @inheritDoc
+     */
+    afterRedraw(ctx) {
+        if (this._lastRect) {
+            ctx.strokeStyle = this.options.strokeStyle;
+            ctx.fillStyle = this.options.strokeStyle;
+            ctx.setLineDash(this.options.lineDash);
+            ctx.font = this.options.font;
+            ctx.strokeRect(
+                this._lastRect.x,
+                this._lastRect.y,
+                this._lastRect.width,
+                this._lastRect.height
+            );
+            ctx.strokeStyle = this.options.strokeStyle;
+            ctx.fillText(
+                this.options.text,
+                this._lastRect.x,
+                this._lastRect.y - this.options.fontSize - 5,
+                this._lastRect.width
+            );
+        }
     }
 }
