@@ -9,7 +9,7 @@ class Filter {
     apply(ctx) {}
 
     /**
-     * Вызывается, когда сцена полностью перерисовывается.
+     * Вызывается, когда сцена полностью перерисована.
      * @param {CanvasRenderingContext2D} ctx
      */
     afterRedraw(ctx) {}
@@ -18,7 +18,7 @@ class Filter {
 /**
  * Фильтр изобржения, увеличивает значение красного цвета в изображении.
  */
-class FilterTerminatorVisonRed extends Filter {
+class FilterTerminatorVisionRed extends Filter {
     /**
      * @inheritDoc
      */
@@ -43,7 +43,7 @@ class FilterTerminatorVisonRed extends Filter {
 /**
  * Фильтр белый шум на изображении.
  */
-class FilterNoize extends Filter {
+class FilterNoise extends Filter {
     /**
      * Конструктор класса.
      * @param {Object} [options]

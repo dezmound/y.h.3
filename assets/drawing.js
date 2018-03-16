@@ -15,6 +15,13 @@ class Canvas {
     }
 
     /**
+     * Вызывается вручную, когда изменяются размеры canvas.
+     * @param {Object} sizes
+     * @private
+     */
+    _resize(sizes) {}
+
+    /**
      * Возвращает холст.
      * @return {null|Element}
      */
@@ -45,6 +52,10 @@ class Canvas {
         this._videoStream = video;
         this._canvas.width = this._videoStream.stream.videoWidth || 640;
         this._canvas.height = this._videoStream.stream.videoHeight || 480;
+        this._resize({
+            width: this._canvas.width,
+            height: this._canvas.height,
+        });
         this._videoStream.stream.addEventListener(
             'loadedmetadata', this._drawVideoFrame.bind(this)
         );
@@ -80,9 +91,12 @@ class Canvas {
     }
 }
 
+/**
+ * Класс для рисования с помощью GPU на 2D canvas.
+ */
 class Canvas2D extends Canvas {
     /**
-     * Конструктор класса Drawing2D.
+     * Конструктор класса Canvas2D.
      * @param {Element} canvas
      */
     constructor(canvas) {
@@ -94,6 +108,47 @@ class Canvas2D extends Canvas {
      */
     _createContext() {
         this._ctx = this._canvas.getContext('2d');
+    }
+}
+
+/**
+ * Класс для рисования на canvas с помощью библиотеки three.js.
+ */
+class Canvas3D extends Canvas {
+    /**
+     * Конструктор класса Canvas3D.
+     * @param {Element} canvas
+     */
+    constructor(canvas) {
+        super(canvas);
+    }
+
+    /**
+     * @inheritDoc
+     */
+    _createContext() {
+        this._ctx = this._canvas.getContext('2d');
+    }
+
+    /**
+     * @inheritDoc
+     */
+    _resize(sizes) {
+        this.filters.forEach((e) => {
+            if (e instanceof Filter3D) {
+                e.resetCanvasSizes(sizes);
+            }
+        });
+    }
+
+    /**
+     * Добавляет 3D фильтр.
+     * @param {Filter3D} filter
+     */
+    addFilter3D(filter) {
+        this.filters.push(filter);
+        filter.canvas = this._ctx.canvas;
+        filter.init();
     }
 }
 
@@ -121,7 +176,7 @@ class VideoStream {
      * Создает видео поток из MediaStream.
      * @see https://developer.mozilla.org/en-US/docs/Web/API/Navigator/getUserMedia
      * @param {MediaStream} mediaStream
-     * @return {self};
+     * @return {self}
      */
     static fromMedia(mediaStream) {
         let _video = document.createElement('video');
