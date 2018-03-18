@@ -10,6 +10,7 @@ class Canvas {
     constructor(canvas) {
         this._canvas = canvas;
         this._ctx = null;
+        this._lock = false;
         this._createContext();
         this._emptyCanvas = document.createElement('canvas');
         this._videoCanvas = document.createElement('canvas');
@@ -76,7 +77,8 @@ class Canvas {
      */
     async _drawVideoFrame() {
         window.requestAnimationFrame(this._drawVideoFrame.bind(this));
-        if (this._videoStream) {
+        if (this._videoStream && !this._lock) {
+            this._lock ^= true;
             let promise = new Promise(async (resolve) => {
                 this._videoCtx.drawImage(
                     this._videoStream.stream, 0, 0,
@@ -85,7 +87,6 @@ class Canvas {
                 );
                 if(this.filters.length !== 0) {
                     let _slice = this.filters.slice(1);
-                    this.filters[0].afterRedraw(this._emptyCtx);
                     await this.filters[0].apply(this._emptyCtx, this._videoCanvas);
                     for (let _i = 0; _i < _slice.length; _i++) {
                         _slice[_i].afterRedraw(this._emptyCtx);
@@ -94,13 +95,18 @@ class Canvas {
                 } else {
                     this._emptyCtx.drawImage(this._videoCanvas, 0, 0);
                 }
-                resolve();
+                resolve(this._emptyCanvas);
             });
-            promise.then(() => {
+            promise.then((_ctx) => {
                     window.requestAnimationFrame(() => {
-                        this._ctx.drawImage(this._emptyCanvas, 0, 0);
+                        this._ctx.drawImage(_ctx, 0, 0);
+                        this._lock ^= true;
                     });
                 });
+        } else if(this._lock) {
+            this.filters.map((f) => {
+                f.afterRedraw(this._emptyCtx);
+            });
         } else {
             throw new Error('Stream is not defined!');
         }

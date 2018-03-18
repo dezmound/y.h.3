@@ -17,6 +17,16 @@ class Filter {
     afterRedraw(ctx) {}
 }
 
+class FilterNone extends Filter {
+    async apply(ctx, source) {
+        let _imageData = source.getContext('2d').getImageData(
+            0, 0, source.width, source.height
+        );
+        ctx.putImageData(_imageData, 0, 0);
+        return Promise.resolve();
+    }
+}
+
 /**
  * Фильтр изобржения, увеличивает значение красного цвета в изображении.
  */
