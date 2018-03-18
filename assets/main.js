@@ -124,6 +124,7 @@ window.onload = function(e) {
             video: true,
             audio: true,
         }, function(stream) {
+            canvas.addFilter(new FilterNone());
             canvas.addFilter(new FilterFace({
                 clearTarget: true,
             }));
