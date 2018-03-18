@@ -115,7 +115,7 @@ class SceneWalker {
 
 window.onload = function(e) {
     try {
-        let canvas = new Canvas2D(document.querySelector('canvas'));
+        let canvas = new Canvas3D(document.querySelector('canvas'));
         navigator.getUserMedia = navigator.getUserMedia ||
             navigator.webkitGetUserMedia ||
             navigator.mozGetUserMedia ||
@@ -124,8 +124,13 @@ window.onload = function(e) {
             video: true,
             audio: true,
         }, function(stream) {
-            canvas.addFilter(new FilterTerminatorVisonRed());
-            canvas.addFilter(new FilterNoize());
+            canvas.addFilter(new FilterNone());
+            canvas.addFilter(new FilterFace({
+                clearTarget: true,
+            }));
+            canvas.addFilter3D(new Filter3DDis());
+            canvas.addFilter(new FilterTerminatorVisionRed());
+            canvas.addFilter(new FilterNoise());
             canvas.addFilter(new FilterVoice({
                 mediaStream: stream,
             }));

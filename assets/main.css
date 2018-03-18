@@ -1,3 +1,6 @@
+html {
+    font: 10px Helvetica, Arial, sans-serif;
+}
 .wrapper {
     width: 100%;
     max-width: 640px;
