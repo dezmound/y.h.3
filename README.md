@@ -1,3 +1,6 @@
+<h2>Демо:</h2>
+[Демо GitHub Pages](https://dezmound.github.io/y.h.3/)
+
 Source map:
 ```
 assets
@@ -19,8 +22,8 @@ assets
 7. `SceneWalker` - случайным образом перемещает элемент по сцене, использует `CSS` анимации.
 
 P.S. В `FireFox` подтормаживает изображение, если стоит фильтр `Filter3DDis`.   
-Я думаю проблема в библиотеке `three.js` и в том коде, что она вставляетв начало `fragmentShader`.    
-Потому что в консоли у меня падает такой `warning`:
+Я думаю проблема в библиотеке `three.js` и в том коде, что она вставляет в начало `fragmentShader`.    
+В консоли падает такой `warning`:
 ```
 THREE.WebGLShader: gl.getShaderInfoLog() fragment 0:2(12): warning: extension `GL_ARB_gpu_shader5' unsupported in fragment shader
 ```
