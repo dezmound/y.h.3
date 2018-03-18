@@ -1,5 +1,5 @@
 /**
- * Предоставляет пользовательский интерфейс для рисования на холсте canvas.
+ * Предоставляет пользовательский интерфейс для рисования видео потока на холсте canvas.
  * Перед использованием нужно установить canvas с помощью метода setCanvas().
  */
 class Canvas {
@@ -9,8 +9,14 @@ class Canvas {
      */
     constructor(canvas) {
         this._canvas = canvas;
-        this.filters = [];
+        this._ctx = null;
         this._createContext();
+        this._emptyCanvas = document.createElement('canvas');
+        this._videoCanvas = document.createElement('canvas');
+        this._videoCtx = this._videoCanvas.getContext('2d');
+        this._emptyCtx = this._emptyCanvas.getContext('2d');
+        this._emptyCtx.globalAlpha = 0;
+        this.filters = [];
         this._videoStream = null;
     }
 
@@ -19,7 +25,10 @@ class Canvas {
      * @param {Object} sizes
      * @private
      */
-    _resize(sizes) {}
+    _resize(sizes) {
+        this._emptyCanvas.width = this._videoCanvas.width = sizes.width;
+        this._emptyCanvas.height = this._videoCanvas.height = sizes.height;
+    }
 
     /**
      * Возвращает холст.
@@ -48,7 +57,7 @@ class Canvas {
      * Захватывает виедо поток и рисует его на canvas.
      * @param {VideoStream} video Видео поток.
      */
-    captureVideoStream(video) {
+    async captureVideoStream(video) {
         this._videoStream = video;
         this._canvas.width = this._videoStream.stream.videoWidth || 640;
         this._canvas.height = this._videoStream.stream.videoHeight || 480;
@@ -65,18 +74,33 @@ class Canvas {
      * Рисует кадр из потока, установленного с помощью captureVideoStream().
      * @private
      */
-    _drawVideoFrame() {
+    async _drawVideoFrame() {
         window.requestAnimationFrame(this._drawVideoFrame.bind(this));
         if (this._videoStream) {
-            this._ctx.drawImage(
-                this._videoStream.stream, 0, 0,
-                this._videoStream.stream.videoWidth,
-                this._videoStream.stream.videoHeight
-            );
-            this.filters.map((f) => {
-                f.afterRedraw(this._ctx);
-                f.apply(this._ctx);
+            let promise = new Promise(async (resolve) => {
+                this._videoCtx.drawImage(
+                    this._videoStream.stream, 0, 0,
+                    this._videoStream.stream.videoWidth,
+                    this._videoStream.stream.videoHeight
+                );
+                if(this.filters.length !== 0) {
+                    let _slice = this.filters.slice(1);
+                    this.filters[0].afterRedraw(this._emptyCtx);
+                    await this.filters[0].apply(this._emptyCtx, this._videoCanvas);
+                    for (let _i = 0; _i < _slice.length; _i++) {
+                        _slice[_i].afterRedraw(this._emptyCtx);
+                        await _slice[_i].apply(this._emptyCtx, this._emptyCanvas);
+                    }
+                } else {
+                    this._emptyCtx.drawImage(this._videoCanvas, 0, 0);
+                }
+                resolve();
             });
+            promise.then(() => {
+                    window.requestAnimationFrame(() => {
+                        this._ctx.drawImage(this._emptyCanvas, 0, 0);
+                    });
+                });
         } else {
             throw new Error('Stream is not defined!');
         }
@@ -134,6 +158,7 @@ class Canvas3D extends Canvas {
      * @inheritDoc
      */
     _resize(sizes) {
+        super._resize(sizes);
         this.filters.forEach((e) => {
             if (e instanceof Filter3D) {
                 e.resetCanvasSizes(sizes);
@@ -147,7 +172,7 @@ class Canvas3D extends Canvas {
      */
     addFilter3D(filter) {
         this.filters.push(filter);
-        filter.canvas = this._ctx.canvas;
+        filter.canvas = this._videoCtx.canvas;
         filter.init();
     }
 }

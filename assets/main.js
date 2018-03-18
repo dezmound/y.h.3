@@ -127,12 +127,12 @@ window.onload = function(e) {
             canvas.addFilter(new FilterFace({
                 clearTarget: true,
             }));
+            canvas.addFilter3D(new Filter3DDis());
             canvas.addFilter(new FilterTerminatorVisionRed());
             canvas.addFilter(new FilterNoise());
             canvas.addFilter(new FilterVoice({
                 mediaStream: stream,
             }));
-            canvas.addFilter3D(new Filter3D());
             canvas.captureVideoStream(VideoStream.fromMedia(stream));
         }, function(e) {
             throw new Error(e);

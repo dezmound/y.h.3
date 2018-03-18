@@ -8,8 +8,6 @@ class Filter3D extends Filter {
      */
     constructor(options) {
         super();
-        this._bridgeCanvas = document.createElement('canvas');
-        this._bridgeContext = this._bridgeCanvas.getContext('2d');
     }
 
     /**
@@ -27,6 +25,31 @@ class Filter3D extends Filter {
     }
 
     /**
+     * Возвращает GLSL vertexShader.
+     * @return {string}
+     * @private
+     */
+    get _vertexShader() {
+        return `
+            uniform sampler2D u_texture;
+            varying vec2 vUv;
+            void main()	{
+                gl_Position = vec4(position, 1.0);
+                vUv = (position.xy + 1.0) * 0.5;
+            }
+        `;
+    }
+
+    /**
+     * Возвращает GSLS fragmentShader.
+     * @return {string}
+     * @private
+     */
+    get _fragmentShader() {
+        return '';
+    }
+
+    /**
      * Рендерит новый кадр для canvas.
      * @private
      */
@@ -35,31 +58,37 @@ class Filter3D extends Filter {
     }
 
     /**
+     * Возвращает проми, который зарезолвится после загрузки текстуры.
+     * @param {Element} canvas
+     * @return {Promise<void>}
+     * @private
+     */
+    async _loadTexture(canvas) {
+        return new Promise((resolve, reject) => {
+            let _loader = new THREE.TextureLoader();
+            _loader.load(
+                canvas.toDataURL('image/jpeg'),
+                (texture) => {
+                    resolve(texture);
+                },
+                undefined,
+                (e) => {
+                    reject(e);
+                }
+            );
+        });
+    }
+
+    /**
      * Обязательно вызвать через super() в дочерних классах.
      * @inheritDoc
+     * @return {Promise<THREE.Texture>} Возвращает текстуру, создержащуюю изображение canvas.
      */
-    apply(ctx) {
-        let _texture = new THREE.CanvasTexture(this._canvas);
-        let _material = new THREE.SpriteMaterial({
-            map: _texture,
-            color: 0xffffff,
-        });
-        let _sprite = new THREE.Sprite(_material);
-        _texture.minFilter = THREE.LinearFilter;
-        _sprite.scale.set(2, 2, 1);
+    async apply(ctx, source) {
+        let _texture = await this._loadTexture(this._canvas);
         this._scene.remove(this._scene, ...this._scene.children);
-        this._scene.add(_sprite);
-        this._render();
-        this._imageData.then((_imageData) => {
-            window.requestAnimationFrame(() => {
-                // ctx.clearRect(
-                //     0, 0,
-                //     ctx.canvas.width,
-                //     ctx.canvas.height
-                // );
-                ctx.putImageData(_imageData, 0, 0);
-            });
-        });
+        _texture.minFilter = THREE.LinearFilter;
+        return _texture;
     }
 
     /**
@@ -78,8 +107,6 @@ class Filter3D extends Filter {
         this._canvas.width = sizes.width;
         this._canvas.height = sizes.height;
         this._renderer.setSize(sizes.width, sizes.height);
-        this._bridgeCanvas.width = sizes.width;
-        this._bridgeCanvas.height = sizes.height;
     }
 
     /**
@@ -87,18 +114,56 @@ class Filter3D extends Filter {
      * @private
      * @return {Promise}
      */
-    get _imageData() {
+    get _image() {
         return new Promise((resolve) => {
             let _image = new Image();
             _image.src = this._renderer.domElement.toDataURL('image/jpeg');
             _image.onload = () => {
-                this._bridgeContext.drawImage(_image, 0, 0);
-                resolve(this._bridgeContext.getImageData(
-                    0, 0,
-                    _image.width,
-                    _image.height
-                ));
+                resolve(_image);
             };
+        });
+    }
+}
+
+class Filter3DDis extends Filter3D {
+    /**
+     * @inheritDoc
+     */
+    get _fragmentShader() {
+        return `
+            uniform sampler2D u_texture;
+            varying vec2 vUv;
+        
+            void main()	{
+                vec4 color = texture2D(u_texture, vUv);
+                color.g = texture2D(u_texture, vUv + vec2(0.01, 0.01)).g;
+                color.b = texture2D(u_texture, vUv + vec2(-0.01, 0.01)).b;
+                gl_FragColor = color;
+            }
+        `;
+    }
+
+    /**
+     * @inheritDoc
+     */
+    async apply(ctx, source) {
+        let _texture = await super.apply(source);
+        let _geometry = new THREE.PlaneGeometry(this._canvas.width, this._canvas.height);
+        let _uniforms = {
+            u_texture: {type: 't', value: _texture},
+        };
+        let _shaderMaterial = new THREE.ShaderMaterial({
+            uniforms: _uniforms,
+            vertexShader: this._vertexShader,
+            fragmentShader: this._fragmentShader
+        });
+        this._scene.add(new THREE.Mesh(_geometry, _shaderMaterial));
+        this._render();
+        let _image = await this._image;
+        ctx.drawImage(_image, 0, 0);
+        _texture.dispose();
+        return new Promise ((resolve) => {
+            resolve(null);
         });
     }
 }
