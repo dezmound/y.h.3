@@ -5,11 +5,13 @@ class Filter {
     /**
      * Применяет фильтр к контексту canvas.
      * @param {CanvasRenderingContext2D} ctx
+     * @param {CanvasRenderingContext2D} [source]
+     * @return {Promise} резолвится, когда был отрисован контекст.
      */
-    apply(ctx) {}
+    async apply(ctx, source) {}
 
     /**
-     * Вызывается, когда сцена полностью перерисовывается.
+     * Вызывается, когда сцена полностью перерисована.
      * @param {CanvasRenderingContext2D} ctx
      */
     afterRedraw(ctx) {}
@@ -18,32 +20,33 @@ class Filter {
 /**
  * Фильтр изобржения, увеличивает значение красного цвета в изображении.
  */
-class FilterTerminatorVisonRed extends Filter {
+class FilterTerminatorVisionRed extends Filter {
     /**
      * @inheritDoc
      */
-    apply(ctx) {
-        let _imageData = ctx.getImageData(
-            0, 0, ctx.canvas.width, ctx.canvas.height
+    async apply(ctx, source) {
+        let _imageData = source.getContext('2d').getImageData(
+            0, 0, source.width, source.height
         );
         let byteStream = _imageData.data;
         for (let i = 0; i < byteStream.length; i+= 4) {
-            byteStream[i] += 100;
-            byteStream[i + 1] -= 75;
-            byteStream[i + 2] -= 75;
+            byteStream[i] += 50;
+            byteStream[i + 1] -= 25;
+            byteStream[i + 2] -= 25;
             byteStream[i + 1] = byteStream[i + 1] < 0 ? 0 : byteStream[i + 1];
             byteStream[i + 2] = byteStream[i + 2] < 0 ? 0 : byteStream[i + 2];
         }
         ctx.putImageData(new ImageData(
             byteStream, ctx.canvas.width, ctx.canvas.height
         ), 0, 0);
+        return Promise.resolve();
     }
 }
 
 /**
  * Фильтр белый шум на изображении.
  */
-class FilterNoize extends Filter {
+class FilterNoise extends Filter {
     /**
      * Конструктор класса.
      * @param {Object} [options]
@@ -60,16 +63,16 @@ class FilterNoize extends Filter {
     /**
      * @inheritDoc
      */
-    apply(ctx) {
-        let _step = Math.floor(this.frequency * ctx.canvas.height);
+    async apply(ctx, source) {
+        let _step = Math.floor(this.frequency * source.height);
         for (
             let i = 0;
-            i < ctx.canvas.height;
+            i < source.height;
             i += Math.floor(((Math.random() * 100) % 100) + _step)
         ) {
-            let _from = Math.floor(((Math.random() * 1000) % ctx.canvas.width));
+            let _from = Math.floor(((Math.random() * 1000) % source.width));
             let _width = Math.floor(
-                (Math.random() * 1000) % (ctx.canvas.width - _from)
+                (Math.random() * 1000) % (source.width - _from)
             );
             ctx.beginPath();
             ctx.setLineDash((
@@ -80,6 +83,7 @@ class FilterNoize extends Filter {
             ctx.lineTo(_from + _width, i);
             ctx.stroke();
         }
+        return Promise.resolve();
     }
 }
 
@@ -133,7 +137,7 @@ class FilterVoice extends Filter {
     /**
      * @inheritDoc
      */
-    apply(ctx) {
+    async apply(ctx) {
         let _x = Math.floor((this.options.position.x / 100) * ctx.canvas.width)
             - this.options.maxWidth;
         let _y = Math.floor((this.options.position.y / 100) * ctx.canvas.height)
@@ -147,6 +151,7 @@ class FilterVoice extends Filter {
             _width,
             this.options.height
         );
+        return Promise.resolve();
     }
 }
 
@@ -180,21 +185,19 @@ class FilterFace extends Filter {
     /**
      * @inheritDoc
      */
-    apply(ctx) {
+    async apply(ctx, source) {
         if (!window.tracking) {
             throw new Error('Tracking js are required');
         }
-        let _imageData = ctx.getImageData(
+        let _imageData = source.getContext('2d').getImageData(
             0, 0,
-            ctx.canvas.width,
-            ctx.canvas.height
+            source.width,
+            source.height
         ).data;
         this._timer = this._timer || setTimeout(() => {
-            requestAnimationFrame(() => {
-                this._tracker.track(
-                    _imageData, ctx.canvas.width, ctx.canvas.height
-                );
-            });
+            this._tracker.track(
+                _imageData, ctx.canvas.width, ctx.canvas.height
+            );
             if (
                 this.options.clearTarget
                 && this._lastRect
@@ -220,6 +223,7 @@ class FilterFace extends Filter {
                 );
             }
         });
+        return Promise.resolve();
     }
 
     /**
